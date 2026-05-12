@@ -46,11 +46,25 @@
   .date-lbl{font-size:11px;color:var(--gray);font-weight:700;display:flex;justify-content:space-between;margin-bottom:3px;}
   .w-count{font-size:10px;background:var(--teal-pale);color:var(--teal);border-radius:8px;padding:0 5px;font-weight:700;}
   .drout-lbl{font-size:10px;background:#e0e0e0;color:#666;border-radius:3px;padding:1px 5px;}
-  .chip{display:block;font-size:11px;padding:2px 5px;border-radius:4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;}
-  .c-work{background:var(--teal-pale);color:#1a6568;}
-  .c-half{background:#dff2f3;color:#256f73;border:1px dashed var(--teal-light);}
-  .c-off{background:var(--coral-pale);color:#a03020;text-decoration:line-through;}
-  .c-helen{background:var(--gold-pale);color:#9a7010;}
+  .chip{display:block;font-size:13px;padding:3px 7px;border-radius:5px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;letter-spacing:0.01em;}
+  .c-work{background:var(--teal-pale);color:#0e5457;}
+  .c-half{background:#dff2f3;color:#1a5e62;border:1.5px dashed var(--teal-light);}
+  .c-off{background:var(--coral-pale);color:#8b2a1c;text-decoration:line-through;}
+  .c-helen{background:var(--gold-pale);color:#7a5c08;}
+  .c-closed{background:#f0f0f0;color:#555;font-style:italic;}
+
+  /* Day-level status overlays */
+  .day-status-bar{font-size:11px;font-weight:700;text-align:center;padding:3px 6px;border-radius:5px;margin-bottom:4px;letter-spacing:0.04em;text-transform:uppercase;}
+  .dsb-drout{background:#e8e8e8;color:#555;}
+  .dsb-closed{background:#fce8e8;color:#8b2a1c;}
+
+  /* Day-level buttons in modal */
+  .day-action-row{display:flex;gap:8px;margin-bottom:12px;padding-bottom:12px;border-bottom:2px solid var(--sand);}
+  .day-action-btn{flex:1;padding:7px 6px;border-radius:8px;border:1.5px solid var(--sand);cursor:pointer;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;background:var(--white);color:var(--gray);transition:all 0.15s;text-align:center;}
+  .day-action-btn:hover{border-color:var(--navy);color:var(--navy);}
+  .day-action-btn.da-drout{background:#e8e8e8;color:#444;border-color:#bbb;}
+  .day-action-btn.da-closed{background:#fce8e8;color:#8b2a1c;border-color:#e8a898;}
+  .day-action-btn.da-normal{background:var(--teal-pale);color:#0e5457;border-color:var(--teal);}
 
   /* PAY PERIOD BANNER */
   .pp-banner{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem;}
@@ -354,18 +368,24 @@ function renderCal(){
       if(date===null){html+=`<div class="cal-cell empty"></div>`;return;}
       const key=dayKey(curYear,curMonth,date);
       const assign=schedData[key]||{};
-      const isDrOut=Object.values(assign).every(v=>v==='drout'||v==='nowork');
+      const dayMeta=assign['__day__']||'normal';
+      const isDrOut=dayMeta==='drout'||Object.values(assign).every(v=>v==='drout'||v==='nowork');
+      const isClosed=dayMeta==='closed';
       const isFri=dow===4;
-      let cls='cal-cell'+(isFri?' friday':'')+(isDrOut?' drout':'');
+      let cls='cal-cell'+(isFri?' friday':'')+(isDrOut||isClosed?' drout':'');
       const wc=HYGS.filter(h=>['work','half','helen'].includes(assign[h.name])).length;
-      let inner=`<div class="date-lbl"><span>${date}</span>${isDrOut?'<span class="drout-lbl">Dr out</span>':`<span class="w-count">${wc} in</span>`}</div>`;
-      HYGS.forEach(h=>{
-        const s=assign[h.name];
-        if(!s||s==='nowork'||s==='drout')return;
-        const cc=s==='helen'?'c-helen':s==='off'?'c-off':s==='half'?'c-half':'c-work';
-        const sf=s==='half'?' ½':s==='off'?' off':'';
-        inner+=`<span class="chip ${cc}">${h.name}${sf}</span>`;
-      });
+      let inner=`<div class="date-lbl"><span>${date}</span>${isDrOut?'<span class="drout-lbl">Dr out</span>':isClosed?'<span class="drout-lbl" style="background:#fce8e8;color:#8b2a1c;">Closed</span>':`<span class="w-count">${wc} in</span>`}</div>`;
+      if(isClosed) inner+=`<div class="day-status-bar dsb-closed">🚫 Office Closed</div>`;
+      else if(isDrOut) inner+=`<div class="day-status-bar dsb-drout">🩺 Dr Out</div>`;
+      else {
+        HYGS.forEach(h=>{
+          const s=assign[h.name];
+          if(!s||s==='nowork'||s==='drout')return;
+          const cc=s==='helen'?'c-helen':s==='off'?'c-off':s==='half'?'c-half':'c-work';
+          const sf=s==='half'?' ½':s==='off'?' off':'';
+          inner+=`<span class="chip ${cc}">${h.name}${sf}</span>`;
+        });
+      }
       html+=`<div class="${cls}" onclick="openModal('${key}',${date},${dow})">${inner}</div>`;
     });
   });
@@ -486,17 +506,44 @@ function renderRot(){
   document.getElementById('rot-body').innerHTML=html;
 }
 
+let currentModalDow=0;
 function openModal(key,date,dow){
+  currentModalDow=dow;
   editKey=key;editTmp=Object.assign({},schedData[key]||{});
   document.getElementById('modal-title').textContent=`${DNAMES[dow]}, ${MONTHS[curMonth]} ${date}`;
   renderModalRows();
   document.getElementById('modal').classList.add('open');
 }
 
+function setDayStatus(status){
+  // Set all hygienists based on day status
+  if(status==='drout'||status==='closed'){
+    HYGS.forEach(h=>{ editTmp[h.name]=h.days.includes(currentModalDow)?'drout':'nowork'; });
+    editTmp['__day__']=status;
+  } else {
+    // Restore to normal scheduled defaults
+    editTmp['__day__']='normal';
+    HYGS.forEach(h=>{
+      if(!h.days.includes(currentModalDow)){editTmp[h.name]='nowork';return;}
+      if(h.noRot){editTmp[h.name]='helen';return;}
+      if(h.halfDays.includes(currentModalDow)){editTmp[h.name]='half';return;}
+      editTmp[h.name]='work';
+    });
+  }
+  renderModalRows();
+}
+
 function renderModalRows(){
   const labels={work:'Working',half:'Half day',off:'Day off',nowork:'Not scheduled',helen:'Working (TH)',drout:'Dr out'};
   const bCls={work:'sw',half:'sh',off:'so',nowork:'sn',helen:'sw',drout:'sn'};
-  let html='';
+  const dayMeta=editTmp['__day__']||'normal';
+  let html=`<div class="day-action-row">
+    <button class="day-action-btn ${dayMeta==='normal'?'da-normal':''}" onclick="setDayStatus('normal')">✅ Normal day</button>
+    <button class="day-action-btn ${dayMeta==='drout'?'da-drout':''}" onclick="setDayStatus('drout')">🩺 Dr out</button>
+    <button class="day-action-btn ${dayMeta==='closed'?'da-closed':''}" onclick="setDayStatus('closed')">🚫 Office closed</button>
+  </div>`;
+  if(dayMeta==='drout') html+=`<p style="font-size:12px;color:#777;margin-bottom:10px;">Doctor is out — all staff marked unavailable. Override individually if needed.</p>`;
+  if(dayMeta==='closed') html+=`<p style="font-size:12px;color:#8b2a1c;margin-bottom:10px;">Office is closed — no staff scheduled.</p>`;
   HYGS.forEach(h=>{
     const s=editTmp[h.name]||'nowork';
     html+=`<div class="modal-row"><span class="m-name">${h.name}</span><button class="s-btn ${bCls[s]||'sn'}" onclick="cycleStatus('${h.name}')">${labels[s]||s}</button></div>`;
@@ -507,7 +554,8 @@ function renderModalRows(){
 function cycleStatus(name){
   const cycle=['work','half','off','nowork'];
   const cur=editTmp[name]||'nowork';
-  editTmp[name]=cycle[(cycle.indexOf(cur)+1)%cycle.length];
+  const idx=cycle.indexOf(cur);
+  editTmp[name]=cycle[idx<0?0:(idx+1)%cycle.length];
   renderModalRows();
 }
 
