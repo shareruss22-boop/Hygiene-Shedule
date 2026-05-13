@@ -256,7 +256,7 @@
       <tbody id="hrs-body"></tbody>
     </table>
   </div>
-  <p style="font-size:11px;color:var(--gray);margin-top:8px;">Full day = 8 hrs &nbsp;·&nbsp; Half day = 4 hrs &nbsp;·&nbsp; Pay periods: May 27–Jun 9, Jun 10–Jun 23, every 2 weeks thereafter. May days prior to Jun 1 are not tracked.</p>
+  <p style="font-size:11px;color:var(--gray);margin-top:8px;">Full day = 8 hrs &nbsp;·&nbsp; Half day = 6 hrs &nbsp;·&nbsp; Pay periods: May 27–Jun 9, Jun 10–Jun 23, every 2 weeks thereafter. May days prior to Jun 1 are not tracked.</p>
 </div>
 
 <!-- ROTATION -->
@@ -542,7 +542,7 @@ function renderHrs(){
     });
   });
 
-  function hrs(c){return(c.w-c.hf)*8+c.hf*4;}
+  function hrs(c){return(c.w-c.hf)*8+c.hf*6;}
 
   // Determine what to show
   const showPeriods = activePP==='all' ? periods : [activePP];
@@ -715,7 +715,7 @@ function printSchedule(){
   renderHrs();
   renderRot();
   const subtitle = document.getElementById('print-hrs-subtitle');
-  if(subtitle) subtitle.textContent = MONTHS[curMonth]+' '+curYear+' · Full day = 8 hrs · Half day = 4 hrs';
+  if(subtitle) subtitle.textContent = MONTHS[curMonth]+' '+curYear+' · Full day = 8 hrs · Half day = 6 hrs';
   const legend = document.getElementById('print-pp-legend');
   if(legend){
     const periods = getPayPeriods();
